@@ -1,0 +1,3 @@
+{
+  "references": ["./server","./client","./lib"]
+}

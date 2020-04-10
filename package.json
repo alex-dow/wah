@@ -1,0 +1,4 @@
+{
+  "private": true,
+  "workspaces": ["packages/server", "packages/lib", "packages/client"]
+}
