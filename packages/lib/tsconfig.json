@@ -4,10 +4,14 @@
     "module": "commonjs",
     "outDir": "./dist",
     "strict": true,
+    "moduleResolution": "node",
     "esModuleInterop": true,
-    "strictPropertyInitialization": false
+    "allowSyntheticDefaultImports": true,
+    "strictPropertyInitialization": false,
+    "composite": true,
+    "rootDir": "./src"
   },
 
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules*"]
 }

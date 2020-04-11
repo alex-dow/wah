@@ -22,27 +22,8 @@ import { Component, Vue } from 'vue-property-decorator';
 import { Get } from 'vuex-pathify';
 import { IPlayer } from '@wah/lib/src/models/player';
 
-import Events from '@wah/lib/src/events';
-
 @Component
 export default class GameSelection extends Vue {
   @Get('player') player!: IPlayer;
-
-  form = {
-    gameId: ''
-  };
-
-  joining = false;
-  showJoiningModal = false;
-
-  startNewGame () {
-    this.showJoiningModal = true;
-    this.$socket.client.emit(Events.START_NEW_GAME);
-  }
-
-  joinGame () {
-    this.showJoiningModal = true;
-    this.$socket.client.emit(Events.JOIN_GAME, this.form.gameId);
-  }
 }
 </script>

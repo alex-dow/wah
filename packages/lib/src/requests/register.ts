@@ -1,3 +1,3 @@
 export interface Register {
-  username: String
+  username: string;
 }

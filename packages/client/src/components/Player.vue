@@ -4,7 +4,7 @@
     <h5 class="mb-1">{{ player.username }}</h5>
     <small>Score: 4</small>
   </div>
-  <cah-cards :cards="10" size="sm"/>
+  <cah-cards :cards="10" size="sm" stacked :left="left" front/>
   <p v-if="disconnected">
     RAGE QUIT! Kicking the fool out in { disconnectTimer } seconds!
   </p>
@@ -27,6 +27,7 @@ import { Events } from '@wah/lib';
 export default class Player extends Vue {
 
    @Prop({ required: true }) readonly player!: IPlayer;
+   @Prop(Boolean) readonly left!: boolean;
 
    @Get('disconnectedPlayers') readonly disconnectedPlayers!: Array<IPlayer>;
 

@@ -14,10 +14,12 @@
     id="game-title-group"
     label="Game Title"
     label-for="game-title-input"
-    description="Show how edgy you think you are with a custom title">
+    description="Show how edgy you think you are with a custom title"
+    :disabled="startingGame">
 
     <b-form-input
       id="game-title-input"
+      ref="game-title-input"
       v-model="form.gameTitle"
       placeholder="Whatever Against Humanity"/>
   </b-form-group>
@@ -52,24 +54,24 @@ export default class NewGameModal extends Vue {
   form = {
     gameTitle: ''
   }
+  startingGame = false;
 
   modalTitle = 'Whatever';
 
-  started = false;
-
   @Socket(Events.JOIN_GAME)
-  onJoinGame () {
+  @Socket(Events.GAME_STARTED)
+  onJoinGame (): void {
     this.$bvModal.hide('new-game-modal');
   }
 
-  onShow () {
+  onShow (): void {
     this.form.gameTitle = '';
     this.modalTitle = this.verbs[Math.floor(Math.random() * this.verbs.length)];
   }
 
-  onSubmit () {
+  onSubmit (): void {
 
-    this.started = true;
+    this.startingGame = true;
 
     const game = this.form.gameTitle === '' ? 'Whatever Against Humanity' : this.form.gameTitle;
 

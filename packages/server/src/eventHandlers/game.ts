@@ -28,8 +28,8 @@ export function onLeaveGame(socket: Socket) {
     console.log(game);
 
     const playerIdx = game.players.findIndex((p) => {
-      console.log(`Comparing ${p._id} to ${player._id}: `, (p._id.toString() === player._id.toString()));
-      return (p._id.toString() === player._id.toString());
+      console.log(`Comparing ${p} to ${player._id}: `, (p.toString() === player._id.toString()));
+      return (p.toString() === player._id.toString());
     });
     if (playerIdx === -1) {
       LOG.warn(`Player ${player.username}:${player._id} is not part of the game ${game.gameId}`);
@@ -69,7 +69,7 @@ export function onStopGame(socket: Socket) {
 
       game.players.forEach((player: IPlayer) => {
         LOG.warn(`Removing player ${player.username} from game ${game.gameId}`);
-        Player.findByIdAndUpdate(player.id, { gameId: '' });
+        Player.findByIdAndUpdate(player, { gameId: '' });
       });
 
       LOG.warn(`Deleting game ${game.gameId}`);
@@ -111,7 +111,7 @@ export function onJoinGame(socket: Socket) {
 
       LOG.info(`Player ${player.username} is joining game ${game.gameId}`);
 
-      if (game.players.find((p) => p.id === player.id)) {
+      if (game.players.find((p) => p === player._id)) {
         LOG.warn(`Player ${player.username} considered alredy part of game ${gameId}`);
       } else {
         game.players.push(player);

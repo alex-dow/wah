@@ -1,5 +1,5 @@
 <template>
-<b-container id="app" class="m-0 p-0">
+<b-container id="app" class="m-0 p-0" >
   <b-row>
     <b-col align-self="center" class="text-center">
       <h1>Whatever Against Humanity</h1>
@@ -32,7 +32,6 @@ import { Socket } from 'vue-socket.io-extended';
 import { Get } from 'vuex-pathify';
 import { IPlayer } from '@wah/lib/src/models/player';
 
-import ApiClient from '@wah/lib/src/client';
 import Events from '@wah/lib/src/events';
 import Errors from '@wah/lib/src/errors';
 
@@ -66,9 +65,8 @@ export default class App extends Vue {
   @Get('inGame') inGame!: boolean;
 
   async mounted () {
-    const api = new ApiClient(new URL(location.protocol + '//' + location.host + '/api/'));
     try {
-      const session = await api.session();
+      await this.$store.dispatch('startSession');
       this.$socket.client.open();
     } catch (err) {
       console.error(err);
@@ -79,12 +77,7 @@ export default class App extends Vue {
   @Socket(Events.ERROR)
   onError (err: Errors) {
 
-    let errorMsg = 'An error has occurred';
-    if (ErrorMsgs[err]) {
-      errorMsg = ErrorMsgs[err];
-    }
-
-    this.$bvToast.toast(errorMsg, {
+    this.$bvToast.toast(err, {
       title: 'Service Error',
       variant: 'danger',
       solid: true
@@ -95,6 +88,25 @@ export default class App extends Vue {
   @Socket(Events.JOIN_GAME)
   onJoinGame (gameId: string) {
     console.log('Joining a game:', gameId);
+  }
+
+  @Socket(Events.GAME_STOPPED)
+  onGameStopped (): void {
+    console.log('GAME STOPPPED!');
+    this.$bvToast.toast('The host decided they had ENOUGH and just gave up and left', {
+      title: 'Game Stopped',
+      variant: 'warning'
+    });
+  }
+
+  @Socket(Events.PLAYER_LEFT)
+  oPlayerLeft (player: IPlayer): void {
+    if (player._id === this.player._id) {
+      this.$bvToast.toast('You just rage quit', {
+        title: 'RAGE QUIT',
+        variant: 'danger'
+      });
+    }
   }
 
 }

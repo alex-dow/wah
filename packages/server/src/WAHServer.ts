@@ -1,23 +1,20 @@
 import * as express from 'express';
 import * as socketio from 'socket.io';
 import { createServer, Server } from 'http';
-import { Events, Errors } from '@wah/lib';
-import { Models } from '@wah/lib';
-const Player = Models.Player;
 import session from 'express-session';
 import { getLogger, Logger } from 'log4js';
 import * as cors from "cors";
 import * as bodyParser from "body-parser";
-import cookieParser from 'cookie-parser';
 
 import modelRouter from './routes/modelRoutes';
 import sessionRouter from './routes/sessionRoutes';
 
-import { onConnect } from './eventHandlers/session';
+// import { onConnect } from './eventHandlers/session';
 
 import MongoDBStore = require('connect-mongodb-session');
 // import { default as MongoDBStore } from 'connect-mongodb-session';
 // var MongoDBStore = require('connect-mongodb-session')(session);
+import { SocketsManager } from './socketsManager';
 
 class WAHServer {
   private _app: express.Application;
@@ -27,6 +24,8 @@ class WAHServer {
   private LOG: Logger = getLogger('WAHServer');
   private sessionName = 'WAHSID';
   private sessionSecret = 'whablegable';
+
+  private socksManager: SocketsManager;
 
   constructor() {
     this._app = express.default();
@@ -58,28 +57,33 @@ class WAHServer {
     this.port = 3000;
     this.server = createServer(this._app);
     this.io = socketio.default(this.server);
+
     //transports: ['websocket']
 
     this.io.use((socket: socketio.Socket, next) => {
       sess(socket.request, socket.request.res, next);
     });
 
-    this.io.on('connect', onConnect);
+    // this.io.on('connect', onConnect);
 
 
 
     sessionRouter(this._app);
     modelRouter(this._app);
 
-
+    this.socksManager = new SocketsManager(this.io);
   }
 
 
 
-  public listen(): void {
+  public async listen(): Promise<WAHServer> {
+    this.LOG.info('Initialiting sockets manager');
+    await this.socksManager.init();
     this.server.listen(this.port, () => {
       this.LOG.info('Server listening on port', this.port);
     });
+
+    return this;
   }
 }
 

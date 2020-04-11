@@ -1,3 +1,3 @@
 export interface NewGameRequest {
-  title?: string
-};
+  title?: string;
+}

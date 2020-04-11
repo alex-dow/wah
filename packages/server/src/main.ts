@@ -37,11 +37,19 @@ const mongoUri = "mongodb://psikon:root123@127.0.0.1:27017/wah?authSource=wah";
 
 LOG.info('Connecting to MongoDB');
 mongoose.connect(mongoUri, {
-  useNewUrlParser: true
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  useCreateIndex: true
 });
+
 
 LOG.info('Starting HTTP server');
 // Bootstrap Step 3: Start HTTP Server
 import WAHServer from './WAHServer';
 const wh = new WAHServer();
-wh.listen();
+wh.listen().then(() => {
+  LOG.info('Started');
+})
+.catch((err) => {
+  LOG.error(err);
+});

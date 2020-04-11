@@ -23,13 +23,15 @@ describe('Game Manager', () => {
 
   it('Starts a new game with a given player as host', async () => {
 
-      const player = new Player();
-      player.username = 'Player One';
+
+      const player = new Player({ username: 'Player One'});
       await player.save();
 
-      const gm: GameManager = await startNewGame(player);
+      const gm: GameManager = await startNewGame(player, "foo");
+      const host = await gm.host();
 
-      await expect(gm.host._id).toBe(player._id);
+      expect(host._id.toString()).toBe(player._id.toString());
+      expect(host.username).toBe(player.username);
 
   });
 

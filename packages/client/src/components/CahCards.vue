@@ -1,7 +1,7 @@
 <template>
 <div class="game-hand" :class="classObj">
   <template  v-for="i in cards">
-    <cah-card :key="'playerCard' + i" :black="black" :size="size"/>
+    <cah-card :key="'playerCard' + i" :black="black" :size="size" :front="front" />
   </template>
 </div>
 </template>
@@ -21,27 +21,32 @@ div.game-hand {
     //float: left;
     position: relative;
   }
+}
 
-  @for $i from 0 through 100 {
-    .cah-card-sm:nth-child(#{$i + 1}) {
-      left: 0em + (-5.5em * $i);
-      //top: 0em;
-    }
-
-    .cah-card-md:nth-child(#{$i + 1}) {
-      left: 0em + (-10em * $i);
-      //top: 0em;
-    }
-
-    .cah-card-lg:nth-child(#{$i + 1}) {
-      left: 0em + (-14em * $i);
-      //top: 0em;
-    }
-  }
+.game-hand.cah-card-left .cah-card {
+box-shadow: -0.3em 0.1em #333 !important;
 }
 
 @for $i from 0 through 100 {
-  .cah-card-left .cah-card:nth-child(#{$i + 1}) {
+  .cah-card-stacked > .cah-card-sm:nth-child(#{$i + 1}) {
+    left: 0em + (-5.2em * $i);
+    //top: 0em;
+  }
+
+  .cah-card-stacked > .cah-card-md:nth-child(#{$i + 1}) {
+    left: 0em + (-10em * $i);
+    //top: 0em;
+  }
+
+  .cah-card-stacked > .cah-card-lg:nth-child(#{$i + 1}) {
+    left: 0em + (-14em * $i);
+    //top: 0em;
+  }
+}
+
+
+@for $i from 0 through 100 {
+  .cah-card-stacked.cah-card-left .cah-card:nth-child(#{$i + 1}) {
     z-index: 100 - $i;
   }
 }
@@ -62,19 +67,41 @@ export default class PlayerHand extends Vue {
   @Prop({ default: 'md' }) readonly size!: string;
   @Prop({ default: 0, type: Number }) readonly cards!: number;
   @Prop({ default: false, type: Boolean }) readonly left!: boolean;
+  @Prop(Boolean) readonly stacked!: boolean;
+  @Prop(Boolean) readonly front!: boolean;
 
   classObj = {
-    'cah-card-left': false
+    'cah-card-left': false,
+    'cah-card-stacked': false,
+    'cah-card-stacked-front': false
   }
 
   @Watch('left')
-  onLeftChanged (newVal: boolean) {
+  onLeftChanged (newVal: boolean): void {
     this.classObj['cah-card-left'] = newVal;
+  }
+
+  @Watch('stacked')
+  onStackedChanged (newVal: boolean): void {
+    this.classObj['cah-card-stacked'] = newVal;
+  }
+
+  @Watch('front')
+  onFrontChanged (newVal: boolean): void {
+    this.classObj['cah-card-stacked-front'] = newVal;
   }
 
   created () {
     if (this.left) {
       this.classObj['cah-card-left'] = true;
+    }
+
+    if (this.stacked) {
+      this.classObj['cah-card-stacked'] = true;
+    }
+
+    if (this.front) {
+      this.classObj['cah-card-stacked-front'] = true;
     }
   }
 }

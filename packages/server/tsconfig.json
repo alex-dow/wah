@@ -5,14 +5,15 @@
     "outDir": "./dist",
     "strict": true,
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "strictPropertyInitialization": true,
     "preserveSymlinks": true,
     "sourceMap": true,
-    "lib": ["es2015","ES2016"]
+    "lib": ["es2015","ES2016"],
   },
   "references": [{
-    "path": "../lib", "composite": true
+    "path": "../lib"
   }],
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "**/*.test.ts"]
+  "exclude": ["node_modules*"]
 }

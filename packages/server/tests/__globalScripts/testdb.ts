@@ -2,11 +2,7 @@
 import mongoose from 'mongoose';
 const { MongoMemoryServer } = require('mongodb-memory-server');
 
-const mongod = new MongoMemoryServer({
-  binary: {
-    version: '3.6.3'
-  }
-});
+const mongod = new MongoMemoryServer();
 
 export async function connect(): Promise<void> {
   const uri = await mongod.getConnectionString();

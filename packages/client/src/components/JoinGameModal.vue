@@ -40,16 +40,19 @@ export default class JoinGameModal extends Vue {
   joining = false;
 
   @Socket(Events.JOIN_GAME)
-  onJoinGame () {
+  @Socket(Events.GAME_STARTED)
+  onJoinGame (): void {
     this.$bvModal.hide('join-game-modal');
   }
 
-  onShow () {
+  onShow (): void {
     this.form.gameId = '';
     this.joining = false;
+    const el = document.getElementById('game-id-input');
+    if (el) el.focus();
   }
 
-  onSubmit () {
+  onSubmit (): void {
     this.joining = true;
     this.$socket.client.emit(Events.JOIN_GAME, this.form.gameId);
   }

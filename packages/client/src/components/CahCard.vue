@@ -1,33 +1,37 @@
 <template>
 <div class="cah-card" :class="classObj">
-  <p class="cah-card-caption">Cards<br/>Against<br/>Humanity</p>
+  <p class="cah-card-caption" v-if="front === false">Cards<br/>Against<br/>Humanity</p>
+  <p class="cah-card-text" v-else>{{ cardText }}</p>
 </div>
 </template>
 
 <style lang="scss">
 $lg-w: 18;
 $lg-h: 22;
-$lg-font-size: 3;
+$lg-caption-size: 3;
+$lg-text-size: 2;
 
 $md-w: $lg-w * 0.666;
 $md-h: $lg-h * 0.666;
-$md-font-size: $lg-font-size * 0.666;
+$md-caption-size: $lg-caption-size * 0.666;
+$md-text-size: $lg-text-size * 0.666;
 
 $sm-w: $lg-w * 0.333;
 $sm-h: $lg-h * 0.333;
-//$sm-font-size: $lg-font-size * 0.666;
-$sm-font-size: $lg-font-size * 0.333;
+$sm-caption-size: $lg-caption-size * 0.333;
+$sm-text-size: $lg-text-size * 0.333;
+
 .cah-card {
   border: 1px solid black;
   border-radius: 1em;
   display: inline-block;
-  width: 18em;
-  height: 22em;
+  min-width: 18em;
+  min-height: 22em;
   padding: 2em;
-  margin: 2em;
+  //margin: 2em;
   font-family: helvetica neue, helvetica, arial, sans-serif;
   font-weight: bolder;
-  box-shadow: .1em .1em .1em .1em #333;
+  box-shadow: 0.1em 0.3em #333;
   position: relative;
   background-color: white;
   color: black;
@@ -35,30 +39,47 @@ $sm-font-size: $lg-font-size * 0.333;
   .cah-card-caption {
     padding: .75rem;
   }
+
+  .cah-card-text {
+    padding: .75rem;
+  }
 }
 
 .cah-card-sm {
-  width: #{$sm-w}em !important;
-  height: #{$sm-h}em !important;
+  min-width: #{$sm-w}em !important;
+  min-height: #{$sm-h}em !important;
+  padding: 0.5em !important;
 
   .cah-card-caption {
-    font-size: #{$sm-font-size}em !important;
+    font-size: #{$sm-caption-size}em !important;
+    padding: 0 !important;
+  }
+
+  .cah-card-text {
+    font-size: #{$sm-text-size}em !important;
+    padding: 0 !important;
   }
 }
 
 .cah-card-md {
-  width: #{$md-w}em !important;
-  height: #{$md-h}em !important;
+  min-width: #{$md-w}em !important;
+  min-height: #{$md-h}em !important;
   .cah-card-caption {
-    font-size: #{$md-font-size}em !important;
+    font-size: #{$md-caption-size}em !important;
+  }
+  .cah-card-text {
+    font-size: #{$md-text-size}em !important;
   }
 }
 
 .cah-card-lg {
-  width: #{$lg-w}em !important;
-  height: #{$lg-h}em !important;
+  min-width: #{$lg-w}em !important;
+  min-height: #{$lg-h}em !important;
   .cah-card-caption {
-    font-size: #{$lg-font-size}em !important;
+    font-size: #{$lg-caption-size}em !important;
+  }
+  .cah-card-text {
+    font-size: #{$lg-text-size}em !important;
   }
 }
 
@@ -77,6 +98,8 @@ import { Component, Prop, Vue, Watch } from 'vue-property-decorator';
 export default class CahCard extends Vue {
   @Prop(Boolean) readonly black!: boolean;
   @Prop({ default: 'md' }) readonly size!: string;
+  @Prop(Boolean) readonly front!: boolean;
+  @Prop({ type: String, default: 'Someone forgot to put text here!!!!'}) readonly text!: string;
 
   classObj = {
     'cah-black-card': false,
@@ -86,16 +109,20 @@ export default class CahCard extends Vue {
   }
 
   @Watch('black')
-  onBlackChanged (newVal: boolean) {
+  onBlackChanged (newVal: boolean): void {
     this.classObj['cah-black-card'] = newVal;
   }
 
   @Watch('size')
-  onSizeChanged (newVal: string) {
+  onSizeChanged (newVal: string): void {
     this.setCardSize(newVal);
   }
 
-  setCardSize (size: string) {
+  get cardText (): string {
+    return this.text.replace(/_/g, '______');
+  }
+
+  setCardSize (size: string): void {
     if (size === 'lg') {
       this.classObj['cah-card-sm'] = false;
       this.classObj['cah-card-md'] = false;
@@ -111,7 +138,7 @@ export default class CahCard extends Vue {
     }
   }
 
-  created () {
+  created (): void {
     if (this.black) {
       this.classObj['cah-black-card'] = true;
     }

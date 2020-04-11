@@ -1,0 +1,7 @@
+node_modules
+dist
+coverage
+.history
+packages/server/node_modules
+packages/lib/node_modules
+packages/client/node_modules

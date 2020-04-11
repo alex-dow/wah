@@ -2,7 +2,6 @@ import { Application } from 'express';
 import { Register } from '@wah/lib/src/requests/register';
 import Errors from '@wah/lib/src/errors';
 import Player from '@wah/lib/src/models/player';
-import player from '@wah/lib/src/models/player';
 import { Logger, getLogger } from 'log4js';
 
 const LOG: Logger = getLogger('sessionApi');
@@ -21,19 +20,22 @@ export default function(app: Application): void {
     .post(async (req, res) => {
       const body: Register = req.body;
 
-      if (req.session?.username) {
-        LOG.error(`${req.session.username} is already reigstered`);
-        res.status(409).json({ err: Errors.ALREADY_REGISTERED });
-        return;
-      }
-
       try {
         const p = new Player(body);
         await p.save();
         if (req.session) {
-          req.session.username = p.username;
+          req.session.player = p;
+          req.session.playerId = p.id;
+          req.session.save((err) => {
+
+            if (err) {
+              LOG.error('Error saving session:', err);
+            }
+            LOG.info(`Player ${p.username} has finished registering`);
+            res.status(200).send(p);
+          });
         }
-        res.status(204).send();
+
       } catch (err) {
         LOG.error(err);
         if (err.code) {

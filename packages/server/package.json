@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "serve": "nodemon",
-    "build": "vue-cli-service build",
+    "build": "tsc --build ./tsconfig.json",
     "test": "jest",
-    "lint": "vue-cli-service lint"
+    "lint": "eslint",
+    "build:cards": "ts-node src/buildCardDb.ts"
   },
   "dependencies": {
     "@shelf/jest-mongodb": "^1.1.5",
@@ -33,6 +34,9 @@
   "devDependencies": {
     "@shelf/jest-mongodb": "^1.1.5",
     "@types/jest": "^25.2.1",
+    "@typescript-eslint/eslint-plugin": "^2.27.0",
+    "@typescript-eslint/parser": "^2.27.0",
+    "eslint": "^6.8.0",
     "jest": "^25.3.0",
     "merge": "^1.2.1",
     "nodemon": "^2.0.2",
@@ -42,7 +46,9 @@
   },
   "jest": {
     "verbose": true,
-    "testMatch": ["**/tests/**/*.test.ts"],
+    "testMatch": [
+      "**/tests/**/*.test.ts"
+    ],
     "testEnvironment": "node",
     "moduleFileExtensions": [
       "js",
