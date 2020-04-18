@@ -1,18 +1,56 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { IPlayer } from './player';
-import { IBlackCard } from './card';
+import { IBlackCard, ICardDeck, IWhiteCard } from './card';
+import { GameState, RoundState } from '../game';
 
-export interface IGame extends Document {
+export interface IGamePlayerHand {
+  playerId: string;
+  cards: Array<IWhiteCard>;
+}
+
+export interface IGameRound {
+  hostPlayer: IPlayer;
+  state: RoundState;
+  winner: IPlayer | null;
+  winningWhiteCard: IWhiteCard | null;
+  winningBlackCard: IBlackCard | null;
+  startedAt: Date;
+  endedAt: Date | null;
+}
+
+export interface IGame {
   gameId: string;
   players: Array<IPlayer>;
-  host: IPlayer;
+  host: IPlayer | null;
   createdAt: Date;
   updatedAt: Date;
-  title?: string;
+  title: string;
   disconnectedPlayers: Array<IPlayer>;
-  usedBlackCards: Array<IBlackCard>;
-
+  decks: Array<ICardDeck>;
+  handSize: number;
+  state: GameState;
+  rounds: Array<IGameRound>;
 }
+
+export interface IGameState extends Document {
+  currentRound: IGameRound;
+  blackCards: Array<IBlackCard>;
+  whiteCards: Array<IWhiteCard>;
+  gameId: string;
+  playerHands: Array<IGamePlayerHand>;
+}
+
+const GameStateSchema: Schema = new Schema({
+  currentRound: {type: Number, default: 0 },
+  gameId: { type: String, required: true, unique: true },
+  blackCards: [{ type: mongoose.Schema.Types.ObjectId, ref: 'BlackCard'}],
+  whiteCards: [{ type: mongoose.Schema.Types.ObjectId, ref: 'WhiteCard'}],
+  playerHands: []
+});
+
+export const GameStateModel = mongoose.model<IGameState>('GameState', GameStateSchema);
+
+export interface IGameDocument extends IGame, Document { }
 
 const GameSchema: Schema = new Schema({
   gameId: { type: String, required: true, unique: true },
@@ -20,11 +58,14 @@ const GameSchema: Schema = new Schema({
   title: { type: String, required: false, default: 'Whatever Against Humanity' },
   players: [ { type: mongoose.Schema.Types.ObjectId, ref: 'Player' }],
   disconnectedPlayers: [ { type: mongoose.Schema.Types.ObjectId, ref: 'Player' } ],
-  usedBlackCards: [{ type: mongoose.Schema.Types.ObjectId, ref: 'BlackCard'}],
+  decks: [{ type: mongoose.Schema.Types.ObjectId, ref: 'CardDeck'}],
   createdAt: { type: Date },
-  updatedAt: { type: Date }
+  updatedAt: { type: Date },
+  handSize: { type: Number, default: 10 },
+  state: { type: String, default: GameState.WAITING },
+  rounds: [{ type: Object }]
 }, {
   timestamps: true
 });
 
-export default mongoose.model<IGame>('Game', GameSchema);
+export default mongoose.model<IGameDocument>('Game', GameSchema);

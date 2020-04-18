@@ -1,26 +1,25 @@
-import { IGame, default as Game } from '@wah/lib/src/models/game';
+import { IGameDocument as IGame, default as Game, IGameState, GameStateModel, IGamePlayerHand } from '@wah/lib/src/models/game';
 import { IPlayer, default as Player } from '@wah/lib/src/models/player';
 import cryptoRandomString from 'crypto-random-string';
 import { getLogger, Logger } from 'log4js';
 import { Errors, WahError } from '@wah/lib/src/errors';
-import { Events } from '@wah/lib';
+import { Events, PlayerEvents, GameEvents } from '@wah/lib';
 import events = require('events');
+import { ICardDeck, BlackCard, WhiteCard, IWhiteCard } from '@wah/lib/src/models/card';
 
 export class GameManager extends events.EventEmitter {
 
   private game: IGame;
+  private gameState: IGameState;
+
   private LOG: Logger;
   private disconnectTimers: Map<string, ReturnType<typeof setTimeout>>;
 
-  private _host?: IPlayer;
-
-  private players: Map<string, IPlayer>;
-
-  constructor(game: IGame) {
+  constructor(game: IGame, gameState: IGameState) {
     super();
     this.game = game;
+    this.gameState = gameState;
     this.disconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
-    this.players = new Map<string, IPlayer>();
     this.LOG = getLogger('gm-' + game.gameId);
   }
 
@@ -32,13 +31,13 @@ export class GameManager extends events.EventEmitter {
     return this.game;
   }
 
-  get host(): IPlayer {
+  get host(): IPlayer | null {
     return this.game.host;
   }
 
   async player(playerId: string): Promise<IPlayer> {
 
-    const player = this.game.players.find((p) => p._id.toString() === playerId);
+    const player = this.game.players.find((p) => p._id.toString() === playerId.toString());
     if (!player) {
       throw new WahError(Errors.PLAYER_NOT_FOUND);
     }
@@ -47,7 +46,7 @@ export class GameManager extends events.EventEmitter {
   }
 
   async kickPlayer(kicker: IPlayer, target: IPlayer): Promise<GameManager> {
-    if (this.game.host._id.toString() !== kicker._id.toString()) {
+    if (this.game.host?._id.toString() !== kicker._id.toString()) {
       this.LOG.error(`${kicker.username} tried to kick ${target.username} but they are not the host!`);
       throw new WahError(Errors.NOT_THE_HOST);
     }
@@ -57,8 +56,48 @@ export class GameManager extends events.EventEmitter {
     return this;
   }
 
+  async givePlayerCards(player: IPlayer, noOfCards: number): Promise<GameManager> {
+    this.player(player._id);
+
+    const handIdx = this.gameState.playerHands.findIndex((h) => h.playerId == player._id);
+    let playerHand: IGamePlayerHand;
+    if (handIdx > -1) {
+      playerHand = this.gameState.playerHands[handIdx];
+    } else {
+      playerHand = {
+        cards: [],
+        playerId: player._id
+      };
+    }
+    const curHandSize = playerHand.cards.length;
+
+    if (curHandSize + noOfCards > this.game.handSize) {
+      this.LOG.warn(`${player.username} wanted ${noOfCards} but that could exceed the maximum ${this.game.handSize} allowed. I am going to truncate this request`);
+      noOfCards = this.game.handSize - curHandSize;
+    }
+
+    const newCards = this.gameState.whiteCards.splice(0, noOfCards);
+    playerHand.cards = playerHand.cards.concat(newCards);
+
+    if (handIdx > -1) {
+      this.gameState.playerHands.splice(handIdx, 1, playerHand);
+    } else {
+      this.gameState.playerHands.push(playerHand);
+    }
+
+    await this.gameState.save();
+
+    this.emit(PlayerEvents.WHITE_CARDS, playerHand.cards);
+    this.emit(GameEvents.PLAYER_HAND_COUNT, {
+      playerId: player._id,
+      count: playerHand.cards.length
+    });
+
+    return this;
+  }
+
   async playerLeft(player: IPlayer): Promise<GameManager> {
-    if (this.game.host._id.toString() === player._id.toString()) {
+    if (this.game.host?._id.toString() === player._id.toString()) {
       return this.stopGame(player);
     } else {
       const idx = this.idxForPlayer(player);
@@ -73,15 +112,23 @@ export class GameManager extends events.EventEmitter {
   }
 
   async stopGame(stopper: IPlayer): Promise<GameManager> {
-    this.LOG.warn(`Player ${stopper.username} has tried to stop game #${this.game.gameId}`);
-    if (this.game.host._id.toString() != stopper._id.toString()) {
-      this.LOG.error(`Player ${stopper.username} tried to stop a game they aren't hosting. ${this.game.host.username} is the host!`);
+    this.LOG.warn(`Player ${stopper.username} is trying to stop game #${this.game.gameId}`);
+    if (this.game.host?._id.toString() != stopper._id.toString()) {
+      this.LOG.error(`Player ${stopper.username} tried to stop a game they aren't hosting. ${this.game.host?.username} is the host!`);
       throw new WahError(Errors.NOT_THE_HOST);
+    }
+
+    for (let i = 0; i < this.game.players.length; i++) {
+      const player = this.game.players[i];
+      delete player.game;
+      player.hand = [];
+      await player.save();
     }
 
     await Game.findByIdAndDelete(this.game._id);
 
-    this.emit(Events.GAME_STOPPED, this.game);
+    this.LOG.warn(`Game stopped!`);
+    this.emit(GameEvents.GAME_STOPPED, this.game);
     // this.game = null;
     return this;
   }
@@ -111,15 +158,12 @@ export class GameManager extends events.EventEmitter {
     } else {
       this.game.players.push(player);
       await this.game.save();
+      player.game = this.game;
+      await player.save();
       this.LOG.info(`${player.username} joined`);
     }
     this.emit(Events.PLAYER_JOINED, player);
 
-    const disconnectedPlayer = this.disconnectTimers.get(player._id.toString());
-    if (disconnectedPlayer) {
-      this.LOG.info(`${player.username}'s disconnect timer has ben stopped`);
-      clearTimeout(disconnectedPlayer);
-    }
     return this;
   }
 
@@ -159,25 +203,44 @@ export class GameManager extends events.EventEmitter {
   }
 }
 
-export async function startNewGame(host: IPlayer, title: string | undefined): Promise<GameManager> {
+export async function startNewGame(host: IPlayer, title: string, decks: Array<ICardDeck>): Promise<GameManager> {
   const gameId = cryptoRandomString({ length: 7 });
   const LOG = getLogger('gm-' + gameId);
+
+  const deckFilter = decks.map((d) => d._id);
+
+  const blackCards = await BlackCard.where('deck').in(deckFilter).populate('deck');
+  const whiteCards = await WhiteCard.where('deck').in(deckFilter).populate('deck');
+
   try {
     LOG.info(`Player ${host.username} is starting a game.`);
+
     await Game.create({
       gameId,
       host,
       players: new Array<IPlayer>(host),
       disconnectedPlayers: new Array<string>(),
-      title
+      title,
+      decks
     });
 
-    const game = await Game.findOne({ gameId }).populate('host').populate('players').exec();
-    if (!game) {
-      throw new WahError(Errors.GAME_NOT_FOUND, `I just created a game with the id ${gameId} but I coundn't fetch it from the db`);
-    }
+    const game = await Game.findOne({gameId: gameId}).populate('players').populate('decks').populate('host');
 
-    return new GameManager(game);
+    await GameStateModel.create({
+      gameId,
+      whiteCards,
+      blackCards,
+      playerHands: new Map<IPlayer['_id'], Array<IWhiteCard>>()
+    });
+
+    const gameState = await GameStateModel.findOne({ gameId: gameId }).populate('whiteCards').populate('blackCards');
+
+    if (game && gameState) {
+      const gm = new GameManager(game, gameState);
+      return gm;
+    } else {
+      throw new WahError(Errors.GAME_NOT_FOUND, "Failed to create the game and game state");
+    }
   } catch (err) {
     LOG.error(`Failed to start a new game! Blame ${host.username}, they're the ones who tried to start this game`);
     throw new WahError(Errors.UNKNOWN, err);

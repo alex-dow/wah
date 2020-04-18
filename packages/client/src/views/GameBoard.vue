@@ -24,36 +24,31 @@
 
     <b-col cols="3" class="players">
       <b-list-group v-if="game">
-        <player v-for="player in leftPlayers" :key="player._id" :player="player"/>
+        <player-card v-for="player in leftPlayers" :key="player._id" :player="player"/>
       </b-list-group>
-      <player :player="player"/>
-      <player :player="player"/>
     </b-col>
     <b-col cols="6" class="center-board p-3">
-      <waiting-to-start  v-if="waitingToStart"/>
-      <b-row v-else>
-        <b-col cols="6">
-          <h4>Pick a Black Card</h4>
-          <cah-cards :cards="3" size="md" black/>
+      <b-row>
+        <b-col cols="6" class="text-center">
+          <h5>White Pile</h5>
+          <cah-cards :noOfCards="3" size="md" white stacked @click.native.prevent="addWhiteCard" />
         </b-col>
-        <b-col cols="6">
-          <h4>Pick a White Card</h4>
-          <cah-cards :cards="3" size="md" white/>
+        <b-col cols="6" class="text-center">
+          <h5>Black Pile</h5>
+          <cah-cards :noOfCards="3" size="md" black stacked />
         </b-col>
       </b-row>
+      <waiting-to-start  v-if="waitingToStart"/>
     </b-col>
     <b-col cols="3" class="players">
       <b-list-group>
-        <player v-for="player in rightPlayers" :key="player._id" :player="player"/>
+        <player-card v-for="player in rightPlayers" :key="player._id" :player="player"/>
       </b-list-group>
-      <player :player="player" left/>
-      <player :player="player" left/>
-      <player :player="player" left/>
     </b-col>
   </b-row>
   <b-row no-gutters>
     <b-col cols="12">
-      <cah-cards :cards="10" size="sm" white front/>
+      <cah-cards :cards="game.playerHand" size="sm" white front/>
     </b-col>
   </b-row>
 </div>
@@ -70,27 +65,27 @@ import { Component, Prop, Vue } from 'vue-property-decorator';
 import { Get } from 'vuex-pathify';
 import { IGame, IPlayer } from '@wah/lib/src/models';
 
-import Player from '../components/Player.vue';
+import PlayerCard from '../components/gameBoard/PlayerCard.vue';
 import CahCards from '../components/CahCards.vue';
 import CahCard from '../components/CahCard.vue';
 import WaitingToStart from '../components/gameBoard/WaitingToStart.vue';
-import { Events } from '@wah/lib';
+import { Events, ClientEvents, PlayerEvents } from '@wah/lib';
 import { Socket } from 'vue-socket.io-extended';
+import { IGameClientState } from '../store/game/state';
 
 @Component({
   components: {
     CahCards,
     CahCard,
-    Player,
+    PlayerCard,
     WaitingToStart
   }
 })
-export default class GameBoard extends Vue {
+export default class GameBoardView extends Vue {
   @Get('game@gameId') gameId!: string;
-  @Get('game') game!: IGame;
+  @Get('game') game!: IGameClientState;
   @Get('game@host') hostPlayer!: IPlayer;
-  @Get('player') player!: IPlayer;
-  @Get('joiningGame') joiningGame!: boolean;
+  @Get('session/player') player!: IPlayer;
 
   totalCards = 4;
 
@@ -112,11 +107,11 @@ export default class GameBoard extends Vue {
 
 
   get isHosting () {
-    return (this.game && this.game.host._id === this.player._id);
+    return (this.game && this.game.host?._id === this.player._id);
   }
 
   stopGame () {
-    this.$socket.client.emit(Events.STOP_GAME, this.gameId);
+    this.$socket.client.emit(ClientEvents.STOP_GAME, this.gameId);
   }
 
   leaveGame () {
@@ -129,6 +124,10 @@ export default class GameBoard extends Vue {
       title: 'RAGE QUITTER ALTERT',
       variant: 'danger'
     });
+  }
+
+  addWhiteCard () {
+    this.$socket.client.emit(ClientEvents.NEW_WHITE_CARD, 1);
   }
 }
 </script>

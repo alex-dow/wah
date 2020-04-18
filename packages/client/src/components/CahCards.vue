@@ -1,7 +1,7 @@
 <template>
 <div class="game-hand" :class="classObj">
-  <template  v-for="i in cards">
-    <cah-card :key="'playerCard' + i" :black="black" :size="size" :front="front" />
+  <template  v-for="i in noOfCards">
+    <cah-card :key="'playerCard' + i" :black="black" :size="size" :front="front" :text="(cards[i-1])? cards[i-1].text : ''"/>
   </template>
 </div>
 </template>
@@ -56,6 +56,8 @@ box-shadow: -0.3em 0.1em #333 !important;
 <script lang="ts">
 import { Component, Prop, Vue, Watch } from 'vue-property-decorator';
 import CahCard from './CahCard.vue';
+import { IWhiteCard } from '@wah/lib/src/models/card';
+import { IBlackCard } from '@wah/lib/src/models/card';
 
 @Component({
   components: {
@@ -65,10 +67,18 @@ import CahCard from './CahCard.vue';
 export default class PlayerHand extends Vue {
   @Prop(Boolean) readonly black!: boolean;
   @Prop({ default: 'md' }) readonly size!: string;
-  @Prop({ default: 0, type: Number }) readonly cards!: number;
+  @Prop({ default: 0, type: Number }) readonly noOfCards!: number;
   @Prop({ default: false, type: Boolean }) readonly left!: boolean;
-  @Prop(Boolean) readonly stacked!: boolean;
-  @Prop(Boolean) readonly front!: boolean;
+  @Prop({ default: false, type: Boolean }) readonly stacked!: boolean;
+  @Prop({ default: false, type: Boolean }) readonly front!: boolean;
+  @Prop({ default: () => [], type: Array}) readonly cards!: Array<IWhiteCard | IBlackCard>;
+
+  get totalCards (): number {
+    console.log('this.cards:', this.cards.length);
+    console.log('this.noOfCards', this.noOfCards);
+    if (this.cards) return this.cards.length;
+    return this.noOfCards;
+  }
 
   classObj = {
     'cah-card-left': false,

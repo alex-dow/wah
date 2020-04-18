@@ -1,10 +1,13 @@
 <template>
 <b-form @submit.prevent="createPlayer" id="sign-up-form">
   <p>
-    Welcome to Whatever Against Humanity. If you don't know what to expect from this, the better the experience will be.
+    All I want is a name, any name, I don't need to know your life story.
   </p>
   <b-form-group id="input-username-group" label="Player Name" description="Choose a name that best describes your favourite alter ego" label-for="input-username">
-    <b-form-input id="input-username" v-model="form.username" required :disabled="saving"/>
+    <b-form-input id="input-username" v-model="form.username" required :disabled="saving" :state="usernameTaken" @input="usernameTaken = null" autofocus/>
+    <b-form-invalid-feedback id="input-username-feedback">
+      Yeah, hmm, someone else used that same username. Suspicious...
+    </b-form-invalid-feedback>
   </b-form-group>
   <b-button type="submit" variant="primary" :disabled="saving">Create Player</b-button> <loading-icon title="Saving ..." v-if="saving" class="ml-4"/>
 </b-form>
@@ -15,54 +18,46 @@
 }
 </style>
 <script lang="ts">
-import { Component, Prop, Vue } from 'vue-property-decorator';
-import { Get } from 'vuex-pathify';
+import { Component, Vue } from 'vue-property-decorator';
 import { Socket } from 'vue-socket.io-extended';
-import { IPlayer } from '@wah/lib/src/models/player';
-
-import { Events, Errors } from '@wah/lib';
-
+import { ClientEvents, Errors, SessionEvents } from '@wah/lib';
 import LoadingIcon from '../components/LoadingIcon.vue';
+import { Error, ErrorMixin } from '../errorListener';
+import { mixins } from 'vue-class-component';
 
 @Component({
   components: {
     LoadingIcon
   }
 })
-export default class SignUpForm extends Vue {
+export default class SignUpFormView extends mixins(ErrorMixin) {
 
   form = {
     username: ''
   };
 
   saving = false;
+  usernameTaken: boolean | null = null;
+
+  @Socket(SessionEvents.PLAYER)
+  onPlayer(): void {
+    this.saving = false;
+  }
 
   async createPlayer (): Promise<void> {
     this.saving = true;
-    this.$socket.client.emit(Events.REGISTER_PLAYER, this.form.username, (err: Errors | null, player: IPlayer | undefined) => {
-      if (err) {
-        if (err === Errors.USERNAME_TAKEN) {
-          this.$bvToast.toast('Sorry chum, someone stole your identifty. Pick a new username, maybe change your bank password too', {
-            variant: 'danger',
-            title: 'Username Taken'
-          });
-        } else {
-          this.$bvToast.toast('Wow, whatever you did broke everything. GOOD JOB! Maybe try again but don\'t screw it up this time eh?', {
-            variant: 'danger',
-            title: err
-          });
-          console.error('Error creating player:', err);
-        }
-      } else {
-        this.$store.commit('SET_PLAYER', player);
-      }
-      this.saving = false;
+    this.$socket.client.emit(ClientEvents.REGISTER_PLAYER, this.form.username);
+  }
 
-    });
+  @Error(Errors.USERNAME_TAKEN)
+  onUsernameTaken(): void {
+    this.saving = false;
+    this.usernameTaken = false;
   }
 
   mounted (): void {
     this.saving = false;
+    this.usernameTaken = null;
   }
 
 }

@@ -1,24 +1,29 @@
+/*
 import { IPlayer, IGame } from '@wah/lib/src/models';
 import { RootState } from './rootState';
 import Vue from 'vue';
+import { ICardDeck, IWhiteCard } from '@wah/lib/src/models/card';
 
-export function SOCKET_SESSION_INFO (state: RootState, payload: any): void {
-  console.log('SOCKET_SESSION_INFO:', payload);
-}
 
-export function SOCKET_PLAYER (state: RootState, payload: IPlayer): void {
+export function SOCKET_SESSION_PLAYER (state: RootState, payload: IPlayer): void {
   state.player = payload;
 }
 
-export function SOCKET_SESSION_STARTED (state: RootState): void {
-  state.sessionStarted = true;
-}
-
-export function SOCKET_CONNECTED (state: RootState, player: IPlayer | undefined): void {
+export function SOCKET_SESSION_CONNECTED (state: RootState, player: IPlayer | undefined): void {
   state.connected = true;
   if (player) {
     state.player =  player;
   }
+}
+
+export function SOCKET_SESSION_GAME (state: RootState, game: IGame): void {
+  state.game = game;
+  Vue.set(state.game, 'players', state.game.players);
+  state.inGame = true;
+}
+
+export function SOCKET_PLAYER_WHITE_CARDS (state: RootState, cards: Array<IWhiteCard>): void {
+  if (state.player) state.player.hand = cards;
 }
 
 export function SOCKET_DISCONNECT (state: RootState): void {
@@ -45,12 +50,7 @@ export function SOCKET_GAME_LEFT (state: RootState): void {
   state.inGame = false;
 }
 
-export function SOCKET_GAME (state: RootState, game: IGame): void {
-  console.log('[wah-socket] Game:', game);
-  state.game = game;
-  Vue.set(state.game, 'players', state.game.players);
-  state.inGame = true;
-}
+
 
 export function SOCKET_PLAYER_JOINED (state: RootState, player: IPlayer): void {
   console.log('Someone joined:', player);
@@ -132,3 +132,4 @@ export function SOCKET_GAME_STOPPED (state: RootState): void {
   state.game = null;
 }
 
+*/

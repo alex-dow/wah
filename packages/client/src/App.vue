@@ -1,5 +1,14 @@
 <template>
-<b-container id="app" class="m-0 p-0" >
+<b-container id="app" class="m-0 p-0" fluid>
+  <lobby-view v-if="connected && !inGame"/>
+  <game-board-view v-else-if="connected && inGame"/>
+  <loading-view v-else />
+
+  <new-game-modal/>
+  <join-game-modal/>
+</b-container>
+
+<!--
   <b-row>
     <b-col align-self="center" class="text-center">
       <h1>Whatever Against Humanity</h1>
@@ -15,10 +24,8 @@
       <sign-up-form />
     </b-col>
   </b-row>
-  <joining-modal/>
-  <new-game-modal/>
-  <join-game-modal/>
-</b-container>
+
+  -->
 </template>
 
 <style lang="scss">
@@ -28,6 +35,7 @@
 
 <script lang="ts">
 import { Component, Prop, Vue } from 'vue-property-decorator';
+import { mixins } from 'vue-class-component';
 import { Socket } from 'vue-socket.io-extended';
 import { Get } from 'vuex-pathify';
 import { IPlayer } from '@wah/lib/src/models/player';
@@ -38,35 +46,36 @@ import Errors from '@wah/lib/src/errors';
 import GameSelection from './views/GameSelection.vue';
 import SignUpForm from './views/SignUpForm.vue';
 import LoadingIcon from './components/LoadingIcon.vue';
-import GameBoard from './views/GameBoard.vue';
+import GameBoardView from './views/GameBoard.vue';
+
+import LoadingView from './views/Loading.vue';
+import LobbyView from './views/Lobby.vue';
 
 import ErrorMsgs from './lang/en/errorMsgs';
 
-import JoiningModal from './components/JoiningModal.vue';
-import NewGameModal from './components/NewGameModal.vue';
-import JoinGameModal from './components/JoinGameModal.vue';
+import NewGameModal from './components/modals/NewGameModal.vue';
+import JoinGameModal from './components/modals/JoinGameModal.vue';
+
+import { ErrorMixin, Error } from './errorListener';
 
 @Component({
   components: {
-    GameSelection,
-    SignUpForm,
-    LoadingIcon,
-    GameBoard,
-    JoiningModal,
+    LoadingView,
+    LobbyView,
     NewGameModal,
-    JoinGameModal
+    JoinGameModal,
+    GameBoardView
   }
 })
-export default class App extends Vue {
+export default class App extends mixins(ErrorMixin) {
 
-  @Get('connected') connected!: boolean;
-  @Get('sessionStarted') sessionStarted!: boolean;
-  @Get('player') player!: IPlayer;
-  @Get('inGame') inGame!: boolean;
+  @Get('session/connected') connected!: boolean;
+  @Get('session/player') player!: IPlayer;
+  @Get('session/inGame') inGame!: boolean;
 
   async mounted () {
     try {
-      await this.$store.dispatch('startSession');
+      await this.$store.dispatch('session/startSession');
       this.$socket.client.open();
     } catch (err) {
       console.error(err);
@@ -74,19 +83,8 @@ export default class App extends Vue {
     }
   }
 
-  @Socket(Events.ERROR)
-  onError (err: Errors) {
-
-    this.$bvToast.toast(err, {
-      title: 'Service Error',
-      variant: 'danger',
-      solid: true
-    });
-    console.error('[wah-service]', err);
-  }
-
   @Socket(Events.JOIN_GAME)
-  onJoinGame (gameId: string) {
+  onJoinGame (gameId: string): void {
     console.log('Joining a game:', gameId);
   }
 

@@ -23,7 +23,7 @@ import { Get } from 'vuex-pathify';
 import { IPlayer } from '@wah/lib/src/models/player';
 
 @Component
-export default class GameSelection extends Vue {
-  @Get('player') player!: IPlayer;
+export default class GameSelectionView extends Vue {
+  @Get('session/player') player!: IPlayer;
 }
 </script>

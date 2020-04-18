@@ -1,6 +1,6 @@
 <template>
 <div class="cah-card" :class="classObj">
-  <p class="cah-card-caption" v-if="front === false">Cards<br/>Against<br/>Humanity</p>
+  <p class="cah-card-caption" v-if="!front">Cards<br/>Against<br/>Humanity</p>
   <p class="cah-card-text" v-else>{{ cardText }}</p>
 </div>
 </template>
@@ -35,6 +35,7 @@ $sm-text-size: $lg-text-size * 0.333;
   position: relative;
   background-color: white;
   color: black;
+  text-align: left;
 
   .cah-card-caption {
     padding: .75rem;
@@ -46,6 +47,8 @@ $sm-text-size: $lg-text-size * 0.333;
 }
 
 .cah-card-sm {
+  max-width: #{$sm-w}em !important;
+  max-height: #{$sm-h}em !important;
   min-width: #{$sm-w}em !important;
   min-height: #{$sm-h}em !important;
   padding: 0.5em !important;
@@ -96,9 +99,9 @@ import { Component, Prop, Vue, Watch } from 'vue-property-decorator';
 
 @Component
 export default class CahCard extends Vue {
-  @Prop(Boolean) readonly black!: boolean;
+  @Prop({ default: false, type: Boolean}) readonly black!: boolean;
   @Prop({ default: 'md' }) readonly size!: string;
-  @Prop(Boolean) readonly front!: boolean;
+  @Prop({ default: false, type: Boolean}) readonly front!: boolean;
   @Prop({ type: String, default: 'Someone forgot to put text here!!!!'}) readonly text!: string;
 
   classObj = {

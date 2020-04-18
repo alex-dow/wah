@@ -3,10 +3,17 @@ import { Register } from '@wah/lib/src/requests/register';
 import Errors from '@wah/lib/src/errors';
 import Player from '@wah/lib/src/models/player';
 import { Logger, getLogger } from 'log4js';
+import { CardDeck } from '@wah/lib/src/models/card';
 
 const LOG: Logger = getLogger('sessionApi');
 
 export default function(app: Application): void {
+
+  app.route('/api/decks')
+  .get(async (req, res) => {
+    const cardDecks = await CardDeck.find({});
+    res.status(200).json(cardDecks);
+  });
 
   app.route('/api/session')
     .get((req, res) => {
