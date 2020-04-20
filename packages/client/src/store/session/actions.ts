@@ -9,7 +9,10 @@ export async function startSession (ctx: ActionContext<ISessionState, IRootState
   return;
 }
 
-export async function socket_sessionGame (ctx: ActionContext<ISessionState, IRootState>, game: IGame): Promise<void> {
-  ctx.commit('game/SET_GAME', game, { root: true });
+export async function socket_playerGameState (ctx: ActionContext<ISessionState, IRootState>, game: IGame): Promise<void> {
   ctx.commit('SET_IN_GAME', true);
+}
+
+export async function socket_gameStopped (ctx: ActionContext<ISessionState, IRootState>, game: IGame): Promise<void> {
+  ctx.commit('SET_IN_GAME', false);
 }

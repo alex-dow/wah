@@ -1,5 +1,6 @@
 import { IGame } from './models/game';
 import { IPlayer } from './models/player';
+import { Schema } from 'mongoose';
 
 /**
  * These events should be globally broadcast to a game room
@@ -14,12 +15,16 @@ export enum GameEvents {
   TITLE               = 'GAME_TITLE',
   PLAYER_LIST         = 'GAME_PLAYER_LIST',
   DECKS               = 'GAME_DECKS',
-  PLAYER_HAND_COUNT   = 'GAME_PLAYER_HAND_COUNT'
+  PLAYER_HAND_COUNT   = 'GAME_PLAYER_HAND_COUNT',
+  WHITE_CARDS_COUNT   = 'GAME_WHITE_CARDS_COUNT',
+  BLACK_CARDS_COUNT   = 'GAME_BLACK_CARDS_COUNT',
+  NEW_ROUND           = 'GAME_NEW_ROUND',
+  ROUND_SKIPPED       = 'GAME_ROUND_SKIPPED'
 }
 
-export interface GameEventArg {
-  game: IGame;
-  payload: any;
+export interface GameEventPayload {
+  gameId: string | Schema.Types.ObjectId;
+  data: any;
 }
 
 /**
@@ -28,13 +33,14 @@ export interface GameEventArg {
  */
 export enum PlayerEvents {
   WHITE_CARDS     = 'PLAYER_WHITE_CARDS',
-  ERROR           = 'PLAYER_ERROR'
+  ERROR           = 'PLAYER_ERROR',
+  GAME_STATE      = 'PLAYER_GAME_STATE'
 }
 
-export interface PlayerEventArg {
-  game: IGame;
-  player: IPlayer;
-  payload: any;
+export interface PlayerEventPayload {
+  gameId: string | Schema.Types.ObjectId;
+  playerId: string | Schema.Types.ObjectId;
+  data: any;
 }
 /**
  * These should be emitted on the socket
@@ -48,15 +54,28 @@ export enum SessionEvents {
 }
 
 /**
- * These are events the client emits
+ * Events sent from the client related to the client's session
  */
-export enum ClientEvents {
-  REGISTER_PLAYER = 'CLIENT_REGISTER_PLAYER',
-  START_NEW_GAME  = 'CLIENT_START_NEW_GAME',
-  JOIN_GAME       = 'CLIENT_JOIN_GAME',
-  KICK_PLAYER     = 'CLIENT_KICK_PLAYER',
-  STOP_GAME       = 'CLIENT_STOP_GAME',
-  NEW_WHITE_CARD  = 'CLIENT_NEW_WHITE_CARD'
+export enum ClientSessionEvents {
+  REGISTER_PLAYER = 'CLIENT_SESSION_REGISTER_PLAYER',
+  NEW_GAME        = 'CLIENT_SESSION_NEW_GAME',
+  JOIN_GAME       = 'CLIENT_SESSION_JOIN_GAME'
+}
+
+/**
+ * Events sent from the client related to a game
+ */
+export enum ClientGameEvents {
+  START_GAME      = 'CLIENT_GAME_START_GAME',
+  STOP_GAME       = 'CLIENT_GAME_STOP_GAME',
+  NEW_WHITE_CARD  = 'CLIENT_GAME_NEW_WHITE_CARD',
+  LEAVE_GAME      = 'CLIENT_GAME_LEAVE_GAME',
+  SKIP_ROUND      = 'CLIENT_GAME_SKIP_ROUND'
+}
+
+export interface ClientGameEventPayload {
+  gameId: string;
+  data: any;
 }
 
 enum Events {

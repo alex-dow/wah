@@ -7,10 +7,14 @@
 </template>
 
 <style lang="scss">
+
+$hover-scale: 1.8;
+
 div.game-hand {
   padding: 0;
   margin: 0;
-  display: flex;
+  display: inline-flex;
+  flex-direction: row;
   flex-flow: nowrap;
   //position: relative;
   //clear: both;
@@ -23,23 +27,48 @@ div.game-hand {
   }
 }
 
+.game-hand.cah-card-hover .cah-card:hover {
+  transform: scale($hover-scale);
+  transform-origin: center center;
+  z-index: 1;
+}
+
+.game-hand.cah-card-hover .cah-card:nth-child(1):hover {
+    transform: scale($hover-scale);
+    transform-origin: left;
+    z-index: 1;
+}
+
+.game-hand.cah-card-hover .cah-card:last-child:hover {
+  transform: scale($hover-scale);
+  transform-origin: right;
+  z-index: 1;
+}
+
 .game-hand.cah-card-left .cah-card {
 box-shadow: -0.3em 0.1em #333 !important;
 }
 
 @for $i from 0 through 100 {
+  .cah-card-stacked > .cah-card-xxs:nth-child(#{$i + 1}) {
+    left:  0em + (-1.4em * $i);
+  }
+
+  .cah-card-stacked > .cah-card-xs:nth-child(#{$i +1 }) {
+    left: 0em + (-2.3em * $i);
+  }
   .cah-card-stacked > .cah-card-sm:nth-child(#{$i + 1}) {
     left: 0em + (-5.2em * $i);
     //top: 0em;
   }
 
   .cah-card-stacked > .cah-card-md:nth-child(#{$i + 1}) {
-    left: 0em + (-10em * $i);
+    left: 0em + (-10.8em * $i);
     //top: 0em;
   }
 
   .cah-card-stacked > .cah-card-lg:nth-child(#{$i + 1}) {
-    left: 0em + (-14em * $i);
+    left: 0em + (-16.5em * $i);
     //top: 0em;
   }
 }
@@ -64,26 +93,21 @@ import { IBlackCard } from '@wah/lib/src/models/card';
     CahCard
   }
 })
-export default class PlayerHand extends Vue {
+export default class CahCards extends Vue {
   @Prop(Boolean) readonly black!: boolean;
   @Prop({ default: 'md' }) readonly size!: string;
   @Prop({ default: 0, type: Number }) readonly noOfCards!: number;
   @Prop({ default: false, type: Boolean }) readonly left!: boolean;
   @Prop({ default: false, type: Boolean }) readonly stacked!: boolean;
   @Prop({ default: false, type: Boolean }) readonly front!: boolean;
+  @Prop({ default: false, type: Boolean }) readonly hover!: boolean;
   @Prop({ default: () => [], type: Array}) readonly cards!: Array<IWhiteCard | IBlackCard>;
-
-  get totalCards (): number {
-    console.log('this.cards:', this.cards.length);
-    console.log('this.noOfCards', this.noOfCards);
-    if (this.cards) return this.cards.length;
-    return this.noOfCards;
-  }
 
   classObj = {
     'cah-card-left': false,
     'cah-card-stacked': false,
-    'cah-card-stacked-front': false
+    'cah-card-stacked-front': false,
+    'cah-card-hover': false
   }
 
   @Watch('left')
@@ -101,6 +125,11 @@ export default class PlayerHand extends Vue {
     this.classObj['cah-card-stacked-front'] = newVal;
   }
 
+  @Watch('hover')
+  onHoverChanged (newVal: boolean): void {
+    this.classObj['cah-card-hover'] = newVal;
+  }
+
   created () {
     if (this.left) {
       this.classObj['cah-card-left'] = true;
@@ -112,6 +141,10 @@ export default class PlayerHand extends Vue {
 
     if (this.front) {
       this.classObj['cah-card-stacked-front'] = true;
+    }
+
+    if (this.hover) {
+      this.classObj['cah-card-hover'] = true;
     }
   }
 }

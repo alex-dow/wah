@@ -62,12 +62,10 @@
 <script lang="ts">
 
 import { Vue, Component } from 'vue-property-decorator';
-import { ClientEvents, SessionEvents } from '@wah/lib';
-//import { IGame } from '@wah/lib/src/models';
-//import { NewGameRequest } from '@wah/lib/src/requests/newGameRequest';
 import { Socket } from 'vue-socket.io-extended';
 import { ICardDeck } from '@wah/lib/src/models/card';
 import LoadingIcon from '../LoadingIcon.vue';
+import { ClientSessionEvents, PlayerEvents } from '@wah/lib/src/events'
 
 @Component({
   components: {
@@ -133,7 +131,7 @@ export default class NewGameModal extends Vue {
 
   modalTitle = 'Whatever';
 
-  @Socket(SessionEvents.GAME)
+  @Socket(PlayerEvents.GAME_STATE)
   onJoinGame (): void {
     this.startingGame = false;
     this.$bvModal.hide('new-game-modal');
@@ -156,7 +154,7 @@ export default class NewGameModal extends Vue {
 
     console.log('selected game decks:', this.form.gameDecks);
 
-    this.$socket.client.emit(ClientEvents.START_NEW_GAME, [this.form.gameTitle, this.form.gameDecks]);
+    this.$socket.client.emit(ClientSessionEvents.NEW_GAME, [this.form.gameTitle, this.form.gameDecks]);
   }
 
   async refreshDecks(): Promise<void> {
@@ -165,7 +163,7 @@ export default class NewGameModal extends Vue {
     this.loadingDecks = false;
   }
 
-  created() {
+  created(): void {
     this.refreshDecks();
   }
 }

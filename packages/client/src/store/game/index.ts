@@ -1,15 +1,16 @@
-import { GameClientState } from './state';
+import makeState from './state';
 import * as gameMutations from './mutations';
 import { make } from 'vuex-pathify';
 
+const state = makeState();
 
 const mutations = {
-  ...make.mutations(GameClientState),
+  ...make.mutations(state),
   ...gameMutations
 }
 
 const gameStore = {
-  state: GameClientState,
+  state,
   mutations,
   namespaced: true
 }

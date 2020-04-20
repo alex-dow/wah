@@ -1,21 +1,19 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { IPlayer } from './player';
 import { IBlackCard, ICardDeck, IWhiteCard } from './card';
-import { GameState, RoundState } from '../game';
+import { IGameRound } from './round';
+
+export enum GameStatus {
+  WAITING = "WAITING",
+  STARTED = "STARTED",
+  ENDED   = "ENDED"
+}
+
+
 
 export interface IGamePlayerHand {
   playerId: string;
   cards: Array<IWhiteCard>;
-}
-
-export interface IGameRound {
-  hostPlayer: IPlayer;
-  state: RoundState;
-  winner: IPlayer | null;
-  winningWhiteCard: IWhiteCard | null;
-  winningBlackCard: IBlackCard | null;
-  startedAt: Date;
-  endedAt: Date | null;
 }
 
 export interface IGame {
@@ -28,11 +26,23 @@ export interface IGame {
   disconnectedPlayers: Array<IPlayer>;
   decks: Array<ICardDeck>;
   handSize: number;
-  state: GameState;
+  status: GameStatus;
   rounds: Array<IGameRound>;
 }
 
-export interface IGameState extends Document {
+export interface IStatePlayerHandCount {
+  playerId: string | mongoose.Schema.Types.ObjectId;
+  count: number;
+}
+
+export interface IGameClientState extends IGame {
+  playerHandCounts: Array<IStatePlayerHandCount>;
+  playerHand: Array<IWhiteCard>;
+  remainingWhiteCards: number;
+  remainingBlackCards: number;
+}
+
+export interface IGameServerState extends Document {
   currentRound: IGameRound;
   blackCards: Array<IBlackCard>;
   whiteCards: Array<IWhiteCard>;
@@ -40,7 +50,7 @@ export interface IGameState extends Document {
   playerHands: Array<IGamePlayerHand>;
 }
 
-const GameStateSchema: Schema = new Schema({
+const GameServerStateSchema: Schema = new Schema({
   currentRound: {type: Number, default: 0 },
   gameId: { type: String, required: true, unique: true },
   blackCards: [{ type: mongoose.Schema.Types.ObjectId, ref: 'BlackCard'}],
@@ -48,7 +58,7 @@ const GameStateSchema: Schema = new Schema({
   playerHands: []
 });
 
-export const GameStateModel = mongoose.model<IGameState>('GameState', GameStateSchema);
+export const GameServerStateModel = mongoose.model<IGameServerState>('GameServerState', GameServerStateSchema);
 
 export interface IGameDocument extends IGame, Document { }
 
@@ -62,7 +72,7 @@ const GameSchema: Schema = new Schema({
   createdAt: { type: Date },
   updatedAt: { type: Date },
   handSize: { type: Number, default: 10 },
-  state: { type: String, default: GameState.WAITING },
+  status: { type: String, default: GameStatus.WAITING },
   rounds: [{ type: Object }]
 }, {
   timestamps: true

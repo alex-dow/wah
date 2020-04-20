@@ -28,7 +28,8 @@
 
 import { Vue, Component } from 'vue-property-decorator';
 import { Socket } from 'vue-socket.io-extended';
-import { ClientEvents, SessionEvents } from '@wah/lib';
+import { SessionEvents } from '@wah/lib';
+import { ClientSessionEvents } from '@wah/lib';
 
 @Component
 export default class JoinGameModal extends Vue {
@@ -53,7 +54,7 @@ export default class JoinGameModal extends Vue {
 
   onSubmit (): void {
     this.joining = true;
-    this.$socket.client.emit(ClientEvents.JOIN_GAME, this.form.gameId);
+    this.$socket.client.emit(ClientSessionEvents.JOIN_GAME, this.form.gameId);
   }
 }
 

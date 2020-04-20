@@ -1,11 +1,13 @@
 import { Socket, Server as IOServer } from 'socket.io';
-import { GameManager, startNewGame } from './gameManager';
-import { Errors, ClientEvents, GameEvents, PlayerEvents, SessionEvents, GameEventArg } from '@wah/lib';
-import { Player, IPlayer, Game } from '@wah/lib/src/models';
+import { GameManager, createNewGame } from './gameManager';
+import { Errors, GameEvents, PlayerEvents, SessionEvents, PlayerEventPayload } from '@wah/lib';
+import { Player, IPlayer, Game, GameServerStateModel } from '@wah/lib/src/models';
+import { ClientGameEvents, ClientSessionEvents, ClientGameEventPayload } from '@wah/lib/src/events';
 import { Logger, getLogger } from 'log4js';
 import { WahError } from '@wah/lib/src/errors';
 import { ICardDeck } from '@wah/lib/src/models/card';
-import { GameStateModel } from '@wah/lib/src/models/game';
+import _ from 'lodash';
+import { Schema } from 'mongoose';
 
 export class SocketsManager {
   private io: IOServer;
@@ -32,50 +34,53 @@ export class SocketsManager {
   }
 
   private bindClientEvents(socket: Socket): void {
-    Object.values(ClientEvents).forEach((clientEvent) => {
-
-      const clientEventMethod = clientEvent;
-      if (typeof (this as any)[clientEventMethod]  === 'function') {
-        socket.on(clientEvent, async (...args) => {
-          try {
-            this.LOG.debug('Received event: ', clientEvent);
-            await (this as any)[clientEventMethod](socket, ...args);
-          } catch (err) {
-            this.LOG.error('Error handling evt ' + clientEvent);
-            this.LOG.error(err);
-          }
-        });
-      }
-    });
+    this.bindClientGameEvents(socket);
+    this.bindClientSessionEvents(socket);
 
     socket.on('disconnecting', () => {
-      this.onPlayerDisconnect(socket);
+      this.onDisconnect(socket);
     });
   }
 
+  /**
+   * Bind global game events to the game socket room
+   */
   private bindGameEvents(gm: GameManager): void {
     Object.values(GameEvents).forEach((gameEvent) => {
-      gm.on(gameEvent, (payload: GameEventArg) => {
+      gm.on(gameEvent, (payload: any) => {
         this.LOG.debug('Sending game event:', gameEvent);
         this.io.in(gm.gameId).emit(gameEvent, payload);
       });
     });
   }
 
-  private bindPlayerEvents(gm: GameManager, socket: Socket): void {
-    const player = socket.request.session.player;
+  /**
+   * Bind game events that target a specific player to the
+   * socket of that player.
+   */
+  private bindPlayerEvents(gm: GameManager): void {
     Object.values(PlayerEvents).forEach((playerEvent) => {
-      gm.on(playerEvent, (payload: any) => {
+      gm.on(playerEvent, (payload: PlayerEventPayload) => {
+        const player = gm.getPlayer(payload.playerId);
+        const socket = this.getPlayerSocket(player._id);
+
         this.LOG.debug(`Sending player event ${playerEvent} to ${player.username}`);
         socket.emit(playerEvent, payload);
       });
     });
   }
 
-  async [ClientEvents.REGISTER_PLAYER] (socket: Socket, username: string): Promise<SocketsManager> {
+  getPlayerSocket(playerId: string | Schema.Types.ObjectId): Socket {
+    const socket = this.sockets.find((sock) => sock.request.session.player?._id.toString() == playerId.toString());
+    if (!socket) {
+      throw new WahError(Errors.PLAYER_NOT_FOUND, "No socket for player id " + playerId);
+    }
+    return socket;
+  }
+
+  async onClientRegisterPlayer (socket: Socket, username: string): Promise<SocketsManager> {
     try {
       const p = await Player.create({ username });
-      socket.request.session.playerId = p._id;
       socket.request.session.player = p;
       socket.request.session.save();
       socket.emit(SessionEvents.PLAYER, p);
@@ -91,68 +96,63 @@ export class SocketsManager {
     return this;
   }
 
-  async [ClientEvents.NEW_WHITE_CARD] (socket: Socket, noOfCards: number): Promise<SocketsManager> {
-
-    const gameId = socket.request.session.gameId;
-    const player = socket.request.session.player;
-
-    const gm = await this.getGmByGameId(gameId);
-    gm.givePlayerCards(player, noOfCards);
-
-    return this;
-  }
-
-  async [ClientEvents.STOP_GAME] (socket: Socket, gameId: string): Promise<SocketsManager> {
-    const gm =  await this.getGmByGameId(gameId);
-    gm.stopGame(socket.request.session.player);
-    return this;
-  }
-
-  async [ClientEvents.START_NEW_GAME] (socket: Socket, payload: [string, Array<ICardDeck>]): Promise<SocketsManager> {
+  async onClientNewGame (socket: Socket, payload: [string, Array<ICardDeck>]): Promise<SocketsManager> {
     const player = socket.request.session.player;
     if (!player) {
       this.LOG.error('Tried to start a game but there is no player in the session, curious');
       throw new WahError(Errors.PLAYER_NOT_FOUND);
     }
 
-    const [title, decks]: [string, Array<ICardDeck>] = payload;
+    let title = payload[0];
+    const decks = payload[1];
 
-    const gm = await startNewGame(player, title, decks);
+    if (!title) {
+      title = "Whatever Against Humanity";
+    }
+
+    const gm = await createNewGame(player, title, decks);
     const gmIdx = this.gameManagers.length;
 
     this.gameManagers.push(gm);
     this.gmIdxMap.set(gm.gameId, gmIdx);
 
     this.bindGameEvents(gm);
-    this.bindPlayerEvents(gm, socket);
+    this.bindPlayerEvents(gm);
 
     socket.request.session.gameId = gm.gameId;
     socket.request.session.game = gm.getGame();
     socket.request.session.save();
     socket.join(gm.gameId);
-    socket.emit(SessionEvents.GAME, gm.getGame());
+
+    gm.refreshClientGameState(player._id);
+
+    //socket.emit(SessionEvents.GAME, gm.getGame());
+    //gm.refreshWhiteCardCount();
+    //gm.refreshBlackCardCount();
 
     return this;
   }
 
-  async [ClientEvents.JOIN_GAME] (socket: Socket, gameId: string): Promise<SocketsManager> {
+  async onClientJoinGame (socket: Socket, gameId: string): Promise<SocketsManager> {
     const player = socket.request.session.player;
     if (!player) {
       this.LOG.error(`Tried to join ${gameId} but there is no player associated with the session`);
       throw new WahError(Errors.PLAYER_NOT_FOUND, "Session has no player!");
     }
 
-    const gm =  await this.getGmByGameId(gameId);
+    const gm = await this.getGmByGameId(gameId);
     socket.join(gm.gameId);
-    await gm.playerJoin(player);
+    await gm.addPlayer(player);
 
-    socket.emit(SessionEvents.GAME, gm.getGame());
+
 
     socket.request.session.game = gm.getGame();
     socket.request.session.gameId = gm.gameId;
     socket.request.session.save((err: any) => {
       if (err) this.LOG.error('Error saving session when joining game:', err);
     });
+
+    gm.refreshClientGameState(player._id);
 
     return this;
   }
@@ -164,70 +164,137 @@ export class SocketsManager {
     this.LOG.info("Initializating");
     const games = await Game.find({}).populate('players').populate('host');
 
+    this.LOG.info(games.length + " games to load");
     for (let i = 0; i < games.length; i++) {
       const game = games[i];
+      this.LOG.debug("Processing " + game.gameId);
       const idx = this.gameManagers.length;
-      const gameState = await GameStateModel.findOne({ gameId: game.gameId }).populate('whiteCards').populate('blackCards');
+      const gameState = await GameServerStateModel.findOne({ gameId: game.gameId }).populate('whiteCards').populate('blackCards');
       if (gameState) {
-        this.gameManagers.push(new GameManager(game, gameState));
+        const gm = new GameManager(game, gameState);
+        this.bindGameEvents(gm);
+        this.bindPlayerEvents(gm);
+
+        this.gameManagers.push(gm);
         this.gmIdxMap.set(game.gameId, idx);
       } else {
-        throw new WahError(Errors.GAME_NOT_FOUND, "The game was found, but not its associated game state!");
+        this.LOG.error("A game was found wihtout an associated game state. Game id: " + game.gameId);
       }
     }
 
     return this;
   }
 
-  private async onPlayerDisconnect(socket: Socket): Promise<void> {
-    if (socket.request.session.player && socket.request.session.gameId) {
-      const game = this.getGmByGameId(socket.request.session.gameId);
-      const player: IPlayer = socket.request.session.player;
+  private async onDisconnect(socket: Socket): Promise<void> {
 
-      await game.playerDisconnected(player);
-
+    const idx = this.sockets.findIndex((s) => s.id == socket.id);
+    if (idx > -1) {
+      this.sockets.splice(idx, 1);
     }
+  }
+
+  /**
+   * Bind session related events from the client
+   */
+  private bindClientSessionEvents(socket: Socket): void {
+    Object.values(ClientSessionEvents).forEach((clientSessionEvent: string) => {
+      let methodName = _.camelCase(clientSessionEvent.replace('CLIENT_SESSION_', ''));
+      methodName = 'onClient' + methodName[0].toUpperCase() + methodName.slice(1);
+
+      this.LOG.debug('Binding evt ' + clientSessionEvent + ' to SocketsManager::' + methodName);
+
+      socket.on(clientSessionEvent, async (payload: any) => {
+        this.LOG.debug('Recv: ' + clientSessionEvent);
+        try {
+          if (typeof (this as any)[methodName]  === 'function') {
+            await (this as any)[methodName](socket, payload);
+          } else {
+            this.LOG.warn('SocketsManager::' + methodName + ' does not exist');
+          }
+        } catch (err) {
+          this.LOG.error(clientSessionEvent + ' failed');
+          this.LOG.error(err);
+        }
+      });
+    });
+  }
+
+  /**
+   * Bind game related events from the client to appropriate game manager
+   */
+  private bindClientGameEvents(socket: Socket): void {
+    Object.values(ClientGameEvents).forEach((clientGameEvent: string) => {
+
+      let methodName = _.camelCase(clientGameEvent.replace('CLIENT_GAME_', ''));
+      methodName = 'onClient' + methodName[0].toUpperCase() + methodName.slice(1);
+
+      this.LOG.debug('Binding evt ' + clientGameEvent + ' to GameManager::' + methodName);
+
+      // CLIENT_GAME_LEAVE_GAME
+      // onClientLeaveGame
+      ClientGameEvents.LEAVE_GAME;
+
+      socket.on(clientGameEvent, async (payload: ClientGameEventPayload) => {
+
+
+
+        try {
+          // Expect game id
+          const gameId: string = payload.gameId;
+          const data: any   = payload.data;
+          const player: IPlayer = socket.request.session.player;
+
+          this.LOG.debug('Recv ' + clientGameEvent + ' for game ' + gameId + ' from player ' + player.username);
+
+          const gm = this.getGmByGameId(gameId);
+
+          if (typeof (gm as any)[methodName]  === 'function') {
+            await (gm as any)[methodName](player._id, data);
+          } else {
+            this.LOG.warn('GameManager::' + methodName + ' does not exist');
+          }
+        } catch (err) {
+          this.LOG.error(clientGameEvent + 'failed');
+          this.LOG.error(err);
+        }
+      });
+    });
   }
 
   private async onConnect(socket: Socket): Promise<void> {
     this.LOG.debug('Socket connected');
+    this.sockets.push(socket);
     this.bindClientEvents(socket);
 
-    if (socket.request.session.playerId) {
+    if (socket.request.session.player) {
 
-      const playerId = socket.request.session.playerId;
-      const player = await Player.findById(playerId);
-      if (!player) {
-        this.LOG.warn(`Connected session has player id ${playerId} but its not in the db`);
-        socket.request.session.playerId = null;
-        socket.request.session.player = null;
-        socket.request.session.save();
-      } else {
-        this.LOG.debug(`Player ${player.username} has connected`);
-        socket.request.session.player = player;
-        socket.request.session.save();
-        socket.emit(SessionEvents.PLAYER, player);
+      const player = socket.request.session.player;
+      socket.emit(SessionEvents.PLAYER, player);
+      this.LOG.debug(`Player ${player.username} has connected`);
 
-        if (player.game) {
-          this.LOG.debug(`Session has a registered game id`);
-          try {
-            const gm = this.getGmByGameId(player.game.gameId);
-            const game = gm.getGame();
-            socket.request.session.game = game;
-            socket.request.session.save();
-            this.LOG.debug(`Player ${player.username} is rejoining game ${game.gameId}`)
-            await gm.playerJoin(player);
-            socket.join(game.gameId);
-            socket.emit(SessionEvents.GAME, game);
+      if (socket.request.session.game) {
+        this.LOG.debug(`Session has a registered game id`);
+        try {
+          const gm = this.getGmByGameId(socket.request.session.game.gameId);
+          const game = gm.getGame();
 
-          } catch (err) {
-            if (err === Errors.GAME_NOT_FOUND) {
+          this.LOG.debug(`Player ${player.username} is rejoining game ${game.gameId}`)
+          await gm.addPlayer(player._id);
+
+          socket.join(game.gameId);
+          await gm.refreshClientGameState(player._id);
+
+        } catch (err) {
+          if (err.constructor.name == 'WahError') {
+            if (err.errType === Errors.GAME_NOT_FOUND) {
               this.LOG.warn(`Session has game id ${socket.request.session.gameId} but there is no game manager for it`);
-              delete player.game;
-              await player.save();
+              socket.request.session.game = null;
+              await socket.request.session.save();
             } else {
-              this.LOG.error(`Error getting game during registration:`, err);
+              this.LOG.error(err.errType, err);
             }
+          } else {
+            this.LOG.error(`Error getting game during registration:`, err);
           }
         }
       }
@@ -235,6 +302,7 @@ export class SocketsManager {
 
     socket.request.session.save();
     socket.emit(SessionEvents.CONNECTED);
+
   }
 
   getGmByGameId(gameId: string): GameManager {

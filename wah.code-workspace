@@ -1,7 +1,20 @@
 {
 	"folders": [
     {
+      "name": "✨ /home/v0idnull/Github/wah",
       "path": "."
+    },
+    {
+      "name": "📦 @wah/client",
+      "path": "packages/client"
+    },
+    {
+      "name": "📦 @wah/lib",
+      "path": "packages/lib"
+    },
+    {
+      "name": "📦 @wah/server",
+      "path": "packages/server"
     }
   ],
   "settings": {}

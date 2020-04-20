@@ -1,12 +1,35 @@
 import * as Models from './models';
 
 export {
-  ClientEvents,
+  ClientGameEventPayload,
+  ClientGameEvents,
+  ClientSessionEvents,
   PlayerEvents,
   SessionEvents,
   GameEvents,
-  GameEventArg,
-  PlayerEventArg,
+  GameEventPayload,
+  PlayerEventPayload,
   default as Events } from './events';
 export { default as Errors } from './errors';
-export { Models };
+export {
+  IPlayer,
+  Player,
+  IGameRound,
+  RoundStatus,
+  GameRound,
+  IWhiteCard,
+  WhiteCard,
+  IBlackCard,
+  BlackCard,
+  ICardDeck,
+  CardDeck,
+  IGame,
+  GameStatus,
+  IGameDocument,
+  IGamePlayerHand,
+  IGameServerState,
+  GameServerStateModel,
+  IStatePlayerHandCount,
+  Game,
+  IGameClientState
+} from './models';

@@ -1,6 +1,6 @@
 <template>
 <div class="cah-card" :class="classObj">
-  <p class="cah-card-caption" v-if="!front">Cards<br/>Against<br/>Humanity</p>
+  <p class="cah-card-caption" v-if="!front && size != 'xxs'">Cards<br/>Against<br/>Humanity</p>
   <p class="cah-card-text" v-else>{{ cardText }}</p>
 </div>
 </template>
@@ -20,6 +20,16 @@ $sm-w: $lg-w * 0.333;
 $sm-h: $lg-h * 0.333;
 $sm-caption-size: $lg-caption-size * 0.333;
 $sm-text-size: $lg-text-size * 0.333;
+
+$xs-w: $lg-w * 0.15;
+$xs-h: $lg-h * 0.15;
+$xs-caption-size: $lg-caption-size * 0.15;
+$xs-text-size: $lg-text-size * 0.15;
+
+$xxs-w: $lg-w * 0.1;
+$xxs-h: $lg-h * 0.1;
+$xxs-caption-size: $lg-caption-size * 0.01;
+$xxs-text-size: $lg-text-size * 0.1;
 
 .cah-card {
   border: 1px solid black;
@@ -43,6 +53,44 @@ $sm-text-size: $lg-text-size * 0.333;
 
   .cah-card-text {
     padding: .75rem;
+  }
+}
+
+.cah-card-xxs {
+  max-width: #{$xxs-w}em !important;
+  max-height: #{$xxs-h}em !important;
+  min-width: #{$xxs-w}em !important;
+  min-height: #{$xxs-h}em !important;
+  padding: 0.1em !important;
+  border-radius: 0.2em !important;
+  box-shadow: none;
+  .cah-card-caption {
+    font-size: #{$xxs-caption-size}em !important;
+    padding: 0 !important;
+  }
+
+  .cah-card-text {
+    font-size: #{$xxs-text-size}em !important;
+    padding: 0 !important;
+  }
+}
+
+.cah-card-xs {
+  max-width: #{$xs-w}em !important;
+  max-height: #{$xs-h}em !important;
+  min-width: #{$xs-w}em !important;
+  min-height: #{$xs-h}em !important;
+  padding: 0.2em !important;
+  border-radius: 0.5em !important;
+  box-shadow: 0.1em 0.01em;
+  .cah-card-caption {
+    font-size: #{$xs-caption-size}em !important;
+    padding: 0 !important;
+  }
+
+  .cah-card-text {
+    font-size: #{$xs-text-size}em !important;
+    padding: 0 !important;
   }
 }
 
@@ -104,48 +152,19 @@ export default class CahCard extends Vue {
   @Prop({ default: false, type: Boolean}) readonly front!: boolean;
   @Prop({ type: String, default: 'Someone forgot to put text here!!!!'}) readonly text!: string;
 
-  classObj = {
-    'cah-black-card': false,
-    'cah-card-sm': false,
-    'cah-card-md': true,
-    'cah-card-lg': false
-  }
-
-  @Watch('black')
-  onBlackChanged (newVal: boolean): void {
-    this.classObj['cah-black-card'] = newVal;
-  }
-
-  @Watch('size')
-  onSizeChanged (newVal: string): void {
-    this.setCardSize(newVal);
+  get classObj(): any {
+    return {
+      'cah-black-card': this.black,
+      'cah-card-xxs': this.size === 'xxs',
+      'cah-card-xs': this.size === 'xs',
+      'cah-card-sm': this.size === 'sm',
+      'cah-card-md': this.size === 'md',
+      'cah-card-lg': this.size === 'lg'
+    }
   }
 
   get cardText (): string {
     return this.text.replace(/_/g, '______');
-  }
-
-  setCardSize (size: string): void {
-    if (size === 'lg') {
-      this.classObj['cah-card-sm'] = false;
-      this.classObj['cah-card-md'] = false;
-      this.classObj['cah-card-lg'] = true;
-    } else if (size === 'md') {
-      this.classObj['cah-card-sm'] = false;
-      this.classObj['cah-card-md'] = true;
-      this.classObj['cah-card-lg'] = false;
-    } else if (size === 'sm') {
-      this.classObj['cah-card-sm'] = true;
-      this.classObj['cah-card-md'] = false;
-      this.classObj['cah-card-lg'] = false;
-    }
-  }
-
-  created (): void {
-    if (this.black) {
-      this.classObj['cah-black-card'] = true;
-    }
-    this.setCardSize(this.size);
   }
 }
 </script>

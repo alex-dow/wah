@@ -6,6 +6,8 @@
 
   <new-game-modal/>
   <join-game-modal/>
+  <confirm-stop-game-modal/>
+  <start-game-modal/>
 </b-container>
 
 <!--
@@ -55,6 +57,8 @@ import ErrorMsgs from './lang/en/errorMsgs';
 
 import NewGameModal from './components/modals/NewGameModal.vue';
 import JoinGameModal from './components/modals/JoinGameModal.vue';
+import ConfirmStopGameModal from './components/modals/ConfirmStopGame.vue';
+import StartGameModal from './components/modals/StartGame.vue';
 
 import { ErrorMixin, Error } from './errorListener';
 
@@ -64,7 +68,9 @@ import { ErrorMixin, Error } from './errorListener';
     LobbyView,
     NewGameModal,
     JoinGameModal,
-    GameBoardView
+    GameBoardView,
+    ConfirmStopGameModal,
+    StartGameModal
   }
 })
 export default class App extends mixins(ErrorMixin) {

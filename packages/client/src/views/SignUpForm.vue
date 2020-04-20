@@ -20,10 +20,11 @@
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator';
 import { Socket } from 'vue-socket.io-extended';
-import { ClientEvents, Errors, SessionEvents } from '@wah/lib';
+import { Errors, SessionEvents } from '@wah/lib';
 import LoadingIcon from '../components/LoadingIcon.vue';
 import { Error, ErrorMixin } from '../errorListener';
 import { mixins } from 'vue-class-component';
+import { ClientSessionEvents } from '@wah/lib/src/events'
 
 @Component({
   components: {
@@ -46,7 +47,7 @@ export default class SignUpFormView extends mixins(ErrorMixin) {
 
   async createPlayer (): Promise<void> {
     this.saving = true;
-    this.$socket.client.emit(ClientEvents.REGISTER_PLAYER, this.form.username);
+    this.$socket.client.emit(ClientSessionEvents.REGISTER_PLAYER, this.form.username);
   }
 
   @Error(Errors.USERNAME_TAKEN)
