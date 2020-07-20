@@ -28,7 +28,7 @@
     "crypto-random-string": "^3.2.0",
     "express": "^4.17.1",
     "express-session": "^1.17.0",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.19",
     "log4js": "^6.1.2",
     "mongodb-memory-server": "^6.5.2",
     "socket.io": "^2.3.0"
