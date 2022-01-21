@@ -29,7 +29,7 @@
     "express": "^4.17.1",
     "express-session": "^1.17.0",
     "lodash": "^4.17.15",
-    "log4js": "^6.1.2",
+    "log4js": "^6.4.0",
     "mongodb-memory-server": "^6.5.2",
     "socket.io": "^2.3.0"
   },
